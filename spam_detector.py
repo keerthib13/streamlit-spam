@@ -1,0 +1,53 @@
+import streamlit as st
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score
+
+st.title("📩 Spam vs Ham Message Classifier")
+
+# Upload CSV dataset
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.write("### Dataset Preview")
+    st.dataframe(df.head())
+
+    # Check required columns
+    if "label" not in df.columns or "message" not in df.columns:
+        st.error("❌ Dataset must have 'label' and 'message' columns")
+    else:
+        X = df['message']
+        y = df['label']
+
+        # Train/test split
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.2, random_state=42
+        )
+
+        # Vectorization
+        vectorizer = TfidfVectorizer()
+        X_train_vec = vectorizer.fit_transform(X_train)
+        X_test_vec = vectorizer.transform(X_test)
+
+        # Train Naive Bayes
+        model = MultinomialNB()
+        model.fit(X_train_vec, y_train)
+
+        # Accuracy
+        y_pred = model.predict(X_test_vec)
+        acc = accuracy_score(y_test, y_pred)
+        st.success(f"✅ Model trained with accuracy: {acc:.2f}")
+
+        # User input prediction
+        st.subheader("🔍 Test with your own message")
+        user_msg = st.text_area("Enter a message to classify:")
+        if st.button("Predict"):
+            if user_msg.strip():
+                user_vec = vectorizer.transform([user_msg])
+                prediction = model.predict(user_vec)[0]
+                st.write(f"**Prediction:** {prediction}")
+            else:
+                st.warning("⚠️ Please enter a message before predicting.")
